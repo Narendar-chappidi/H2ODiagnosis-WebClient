@@ -1,0 +1,349 @@
+﻿<!doctype html>
+<html>
+    <head>
+		<style>
+            html,
+            body 
+            {
+                font-family: Arial, sans-serif;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            #map
+            {
+                height: 100%;
+				width:100%
+            }
+        </style>
+		<style>
+			#menu a {
+			  position: absolute;
+			  left: -400px;
+			  transition: 0.3s;
+			  padding: 15px;
+			  width: 400px;
+			  text-decoration: none;
+			  font-size: 20px;
+			  color: white;
+			  border-radius: 0 5px 5px 0;
+			}
+
+			#menu a:hover 
+			{
+			  left: 0;
+			}
+			
+			#menu a:click 
+			{
+			  left: -400px
+			}
+
+			#rwhs 
+			{
+			  top: 20px;
+			  background-color: #2196F3;
+			}
+
+			#wrp 
+			{
+			  top: 80px;
+			  background-color: #4CAF50;
+			}
+
+			#wusg 
+			{
+			  top: 140px;
+			  background-color: #f44336;
+			}
+
+			#home 
+			{
+			  top: 200px;
+			  background-color: #555
+			}
+		</style>
+    </head>
+    <body>		
+		<div id="map"></div>
+        <div id="menu" class="H2ODiagnosticsMenu">
+		  <a href="#" id="rwhs" onclick="showORhideRWHSList()">Rain Water Harvesting Structures</a>
+		  <a href="#" id="wrp"  onclick="showORhideRecycleList()">Water Recycling Plants</a>
+		  <a href="#" id="wusg" onclick="showORhideWUSGList()">Water Usage</a>
+		  <a href="#" id="home" onclick="OnClickHome()">Home</a>
+		</div>	
+		<script>
+            var H2ODiagnosticsMap;
+			var rwhsMarkers = [];
+			var recycleMarkers = [];
+			var wusgMarkers = [];
+			var HCCIMarker;
+			var tooltipWindow;
+			var doShowRWHSList = true;
+			var doShowRecycleList = true;
+			var doShowWUsgList = true;
+						
+            function initMap()
+            {
+				var HCCI = { lat: 17.443462, lng: 78.374550 };
+                H2ODiagnosticsMap = new google.maps.Map(document.getElementById('map'),
+				{
+					center: HCCI,
+					zoom: 13,
+					mapTypeId: 'satellite'
+				});
+				
+				HCCIMarker = new google.maps.Marker
+				({
+					position: HCCI,
+					title: 'Welcome To Hexathon',
+					icon: 'Hexathon.png',
+					map: H2ODiagnosticsMap});
+					
+				tooltipWindow = new google.maps.InfoWindow();				
+				HCCIMarker.addListener('click', function(){OnClickMarker(HCCIMarker, new google.maps.InfoWindow());});
+            }
+			
+			function OnClickHome()
+			{
+				HCCIMarker.setMap(H2ODiagnosticsMap);				
+			}
+
+			function OnClickMarker(marker, tooltipWindow)
+			{
+				if (tooltipWindow.marker != marker)
+				{
+					tooltipWindow.marker = marker;
+					tooltipWindow.setContent('<div>' + marker.title + '</div>');
+					tooltipWindow.open(H2ODiagnosticsMap, marker);
+					tooltipWindow.addListener('close', function() {OnCloseMarker(tooltipWindow);});
+				}
+			}
+			
+			function OnCloseMarker(tooltipWindow)
+			{
+				tooltipWindow.marker = null;
+			}
+			
+			function showORhideRWHSList()
+			{
+				if (doShowRWHSList)
+				{
+					showRWHSList();
+					doShowRWHSList = false;
+				}
+				else
+				{
+					hideRWHSList();
+					doShowRWHSList = true;
+				}
+			} 
+			
+			function showRWHSList()
+			{
+				HCCIMarker.setMap(null);
+				var rwhsImage = { url: 'rwhs.png',
+							  size: new google.maps.Size(71, 71),
+							  origin: new google.maps.Point(0, 0),
+							  anchor: new google.maps.Point(17, 34),
+							  scaledSize: new google.maps.Size(25, 25)
+							};
+	//						
+				
+				var rwhsData = [];
+				
+				// Create a request variable and assign a new XMLHttpRequest object to it.
+				var request = new XMLHttpRequest();
+
+				// Open a new connection, using the GET request on the URL endpoint
+				request.open('GET', 'http://IN-HGS3300:62450/api/H2ODiagnostics/v1/RWHS/true/', true);
+
+				request.onload = function() {
+					console.log("In Json response");
+				// Begin accessing JSON data here
+				// Begin accessing JSON data here
+					var data = JSON.parse(this.response);
+					data.forEach(can => { 
+					
+						//var item = { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude} }
+						rwhsData.push( { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude} } );
+					});
+					
+					console.log(rwhsData);
+				}
+				// Send request
+				request.send();
+								 
+				var bounds = new google.maps.LatLngBounds();
+				
+				for(var i = 0; i < rwhsData.length; i++)
+				{
+					var marker = new google.maps.Marker({ position: rwhsData[i].location,
+														  title: rwhsData[i].title,
+														  animation: google.maps.Animation.DROP});
+					marker.setMap(H2ODiagnosticsMap);
+					marker.setIcon(rwhsImage);
+					marker.addListener('click', function(){OnClickMarker(marker, new google.maps.InfoWindow());});
+					rwhsMarkers.push(marker);
+					
+					bounds.extend(marker.position);					
+				}
+				H2ODiagnosticsMap.fitBounds(bounds);
+			}
+			
+			function hideRWHSList()
+			{
+				for(var i = 0; i < rwhsMarkers.length; i++)
+				{
+					rwhsMarkers[i].setMap(null);
+					rwhsMarkers[i].setIcon(null);
+				}
+			}
+			
+			function showORhideRecycleList()
+			{
+				if (doShowRecycleList)
+				{
+					showRecycleList();
+					doShowRecycleList = false;
+				}
+				else
+				{
+					hideRecycleList();
+					doShowRecycleList = true;
+				}
+			}
+			
+			function showRecycleList()
+			{
+				HCCIMarker.setMap(null);
+				var recycleImage = { url: 'Recycle.png',
+							  size: new google.maps.Size(71, 71),
+							  origin: new google.maps.Point(0, 0),
+							  anchor: new google.maps.Point(17, 34),
+							  scaledSize: new google.maps.Size(25, 25)
+							};
+	//						
+				
+				var recycleData = [];
+				
+				// Create a request variable and assign a new XMLHttpRequest object to it.
+				var request = new XMLHttpRequest();
+
+				// Open a new connection, using the GET request on the URL endpoint
+				request.open('GET', 'http://in-hgs3300:62450/api/H2oDiagnostics/v1/RecyclingPlant/true/', true);
+
+				request.onload = function() {
+					console.log("In Json response");
+				// Begin accessing JSON data here
+				// Begin accessing JSON data here
+					var data = JSON.parse(this.response);
+					data.forEach(can => { 
+						recycleData.push( { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude} } );
+					});
+					console.log(recycleData);
+				}
+				// Send request
+				request.send();
+								 
+				var bounds = new google.maps.LatLngBounds();
+				
+				for(var i = 0; i < recycleData.length; i++)
+				{
+					var marker = new google.maps.Marker({ position: recycleData[i].location,
+														  title: recycleData[i].title,
+														  animation: google.maps.Animation.DROP});
+					marker.setMap(H2ODiagnosticsMap);
+					marker.setIcon(recycleImage);
+					marker.addListener('click', function(){OnClickMarker(marker, new google.maps.InfoWindow());});
+					recycleMarkers.push(marker);
+					
+					bounds.extend(marker.position);					
+				}
+				H2ODiagnosticsMap.fitBounds(bounds);
+			}
+			
+			function hideRecycleList()
+			{
+				for(var i = 0; i < recycleMarkers.length; i++)
+				{
+					recycleMarkers[i].setMap(null);
+					recycleMarkers[i].setIcon(null);
+				}
+			}
+			function showORhideWUSGList()
+			{
+				if (doShowWUsgList)
+				{
+					showWUSGList();
+					doShowWUsgList = false;
+				}
+				else
+				{
+					hideWUSGList();
+					doShowWUsgList = true;
+				}
+			}
+			
+			function showWUSGList()
+			{
+				HCCIMarker.setMap(null);
+				var wusgData = [];
+				
+				// Create a request variable and assign a new XMLHttpRequest object to it.
+				var request = new XMLHttpRequest();
+
+				// Open a new connection, using the GET request on the URL endpoint
+				request.open('GET', 'http://IN-HGS3300:62450/api/H2ODiagnostics/v1/UsageScore/0/100/', true);
+
+				request.onload = function() {
+					console.log("In Json response");
+				// Begin accessing JSON data here
+				// Begin accessing JSON data here
+					var data = JSON.parse(this.response);
+					data.forEach(can => { 
+ 
+						wusgData.push( { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude} } );
+					});
+					console.log(wusgData);
+				}
+				// Send request
+				request.send();
+								 
+				var bounds = new google.maps.LatLngBounds();
+				
+				for(var i = 0; i < wusgData.length; i++)
+				{
+					var marker = new google.maps.Marker({ position: wusgData[i].location,
+														  title: wusgData[i].title,
+														  animation: google.maps.Animation.DROP});
+					marker.setMap(H2ODiagnosticsMap);
+					if (wusgData[i].UsageScore < 35)
+						marker.setIcon(H2OUsgScore_Red.png);
+					else if (wusgData[i].UsageScore > 35 && wusgData[i].UsageScore < 50)
+						marker.setIcon(H2OUsgScore_Grey.png);
+					else if (wusgData[i].UsageScore < 50 && wusgData[i].UsageScore < 70)
+						marker.setIcon(H2OUsgScore_Green.png);
+					else
+						marker.setIcon(H2OUsgScore_Blue.png);
+					marker.addListener('click', function(){OnClickMarker(marker, new google.maps.InfoWindow());});
+					wusgMarkers.push(marker);
+					
+					bounds.extend(marker.position);					
+				}
+				H2ODiagnosticsMap.fitBounds(bounds);
+			}
+			
+			function hideWUSGList()
+			{
+				for(var i = 0; i < wusgMarkers.length; i++)
+				{
+					wusgMarkers[i].setMap(null);
+					wusgMarkers[i].setIcon(null);
+				}
+			}
+        </script>
+        <script async defer
+                src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAtKmLLeUxK6XOCZhwE3-kecW1oYVVzMUY&v=3&callback=initMap"></script>
+    </body>
+</html>
