@@ -104,9 +104,30 @@
 				HCCIMarker.addListener('click', function(){OnClickMarker(HCCIMarker, new google.maps.InfoWindow());});
             }
 			
+			function CloseAll()
+			{
+				hideRWHSList();
+				doShowRWHSList = true;
+				
+				hideRecycleList();
+				doShowRecycleList = true;
+					
+				hideWUSGList();
+				doShowWUsgList = true;
+			}
+			
 			function OnClickHome()
 			{
-				HCCIMarker.setMap(H2ODiagnosticsMap);				
+				CloseAll();
+				
+				HCCIMarker.setMap(null);
+				var bounds = new google.maps.LatLngBounds();
+				bounds.extend(HCCIMarker.position);
+				H2ODiagnosticsMap.fitBounds(bounds);
+				HCCIMarker.setMap(H2ODiagnosticsMap);
+				
+				// Send request
+				request.send();
 			}
 
 			function OnClickMarker(marker, tooltipWindow)
@@ -114,7 +135,7 @@
 				if (tooltipWindow.marker != marker)
 				{
 					tooltipWindow.marker = marker;
-					tooltipWindow.setContent('<div>' + marker.title + '</div>');
+					tooltipWindow.setContent('<div>' + marker.title + "\n" + marker.usage + '</div>');
 					tooltipWindow.open(H2ODiagnosticsMap, marker);
 					tooltipWindow.addListener('close', function() {OnCloseMarker(tooltipWindow);});
 				}
@@ -169,25 +190,21 @@
 						rwhsData.push( { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude} } );
 					});
 					
-					console.log(rwhsData);
-					
-							var bounds = new google.maps.LatLngBounds();					
-						console.log(bounds);
-						console.log(rwhsData.length);
-						for(var i = 0; i < rwhsData.length; i++)
-						{
-							var marker = new google.maps.Marker({ position: rwhsData[i].location,
-																  title: rwhsData[i].title,
-																  animation: google.maps.Animation.DROP});
-							console.log( marker );
-							marker.setMap(H2ODiagnosticsMap);
-							marker.setIcon(rwhsImage);
-							marker.addListener('click', function(){OnClickMarker(marker, new google.maps.InfoWindow());});
-							rwhsMarkers.push(marker);
-							
-							bounds.extend(marker.position);					
-						}
-						H2ODiagnosticsMap.fitBounds(bounds);
+					var bounds = new google.maps.LatLngBounds();					
+					for(var i = 0; i < rwhsData.length; i++)
+					{
+						var marker = new google.maps.Marker({ position: rwhsData[i].location,
+															  title: rwhsData[i].title,
+															  animation: google.maps.Animation.DROP});
+						console.log( marker );
+						marker.setMap(H2ODiagnosticsMap);
+						marker.setIcon(rwhsImage);
+						marker.addListener('click', function(){OnClickMarker(marker, new google.maps.InfoWindow());});
+						rwhsMarkers.push(marker);
+						
+						bounds.extend(marker.position);					
+					}
+					H2ODiagnosticsMap.fitBounds(bounds);
 				}
 				// Send request
 				request.send();
@@ -295,6 +312,31 @@
 			
 			function showWUSGList()
 			{
+				var usgScore_Red = { url: 'H2OUsgScore_Red.png',
+							  size: new google.maps.Size(71, 71),
+							  origin: new google.maps.Point(0, 0),
+							  anchor: new google.maps.Point(17, 34),
+							  scaledSize: new google.maps.Size(25, 25)
+							};
+				var usgScore_Blue = { url: 'H2OUsgScore_Blue.png',
+								  size: new google.maps.Size(71, 71),
+								  origin: new google.maps.Point(0, 0),
+								  anchor: new google.maps.Point(17, 34),
+								  scaledSize: new google.maps.Size(25, 25)
+								};
+				var usgScore_Green = { url: 'H2OUsgScore_Green.png',
+								  size: new google.maps.Size(71, 71),
+								  origin: new google.maps.Point(0, 0),
+								  anchor: new google.maps.Point(17, 34),
+								  scaledSize: new google.maps.Size(25, 25)
+								};
+				var usgScore_Grey = { url: 'H2OUsgScore_Grey.png',
+								  size: new google.maps.Size(71, 71),
+								  origin: new google.maps.Point(0, 0),
+								  anchor: new google.maps.Point(17, 34),
+								  scaledSize: new google.maps.Size(25, 25)
+								};
+								
 				HCCIMarker.setMap(null);
 				var wusgData = [];
 				
@@ -311,26 +353,27 @@
 					var data = JSON.parse(this.response);
 					data.forEach(can => { 
  
-						wusgData.push( { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude} } );
+						wusgData.push( { title : can.Name , location: {lat: can.Latitude, lng: can.Longitude}, usage: can.UsageScore } );
 					});
 					console.log(wusgData);
 						
-						var bounds = new google.maps.LatLngBounds();
+					var bounds = new google.maps.LatLngBounds();
 					
 					for(var i = 0; i < wusgData.length; i++)
 					{
 						var marker = new google.maps.Marker({ position: wusgData[i].location,
 															  title: wusgData[i].title,
+															  usage: wusgData[i].usage,
 															  animation: google.maps.Animation.DROP});
 						marker.setMap(H2ODiagnosticsMap);
-						if (wusgData[i].UsageScore < 35)
-							marker.setIcon(H2OUsgScore_Red.png);
-						else if (wusgData[i].UsageScore > 35 && wusgData[i].UsageScore < 50)
-							marker.setIcon(H2OUsgScore_Grey.png);
-						else if (wusgData[i].UsageScore < 50 && wusgData[i].UsageScore < 70)
-							marker.setIcon(H2OUsgScore_Green.png);
+						if (wusgData[i].usage < 35)
+							marker.setIcon(usgScore_Red);
+						else if (wusgData[i].usage >= 35 && wusgData[i].usage < 50)
+							marker.setIcon(usgScore_Grey);
+						else if (wusgData[i].usage >= 50 && wusgData[i].usage < 70)
+							marker.setIcon(usgScore_Green);
 						else
-							marker.setIcon(H2OUsgScore_Blue.png);
+							marker.setIcon(usgScore_Blue);
 						marker.addListener('click', function(){OnClickMarker(marker, new google.maps.InfoWindow());});
 						wusgMarkers.push(marker);
 						
@@ -340,8 +383,6 @@
 				}
 				// Send request
 				request.send();
-								 
-				
 			}
 			
 			function hideWUSGList()
